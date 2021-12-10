@@ -37,14 +37,14 @@ object WebServer extends IOApp with Http4sDsl[IO] {
   ): Resource[IO, DatabaseService] = 
     for {
       pool <- Session.pooled[IO](
-      host = host,
-      port = 5432,
-      user = "benchmarkdbuser",
-      database = "hello_world",
-      password = Some("benchmarkdbpass"),
-      max = poolSize
-    )
-    random <- Resource.eval(Random.scalaUtilRandom[IO])
+                host = host,
+                port = 5432,
+                user = "benchmarkdbuser",
+                database = "hello_world",
+                password = Some("benchmarkdbpass"),
+                max = poolSize
+              )
+      random <- Resource.eval(Random.scalaUtilRandom[IO])
     } yield DatabaseService.fromPool(pool, random)
 
   // Add a new fortune to an existing list, and sort by message.
@@ -63,35 +63,33 @@ object WebServer extends IOApp with Http4sDsl[IO] {
 
   // HTTP service definition
   def service(db: DatabaseService) =
-    org.http4s.server.middleware.ErrorHandling.httpRoutes(
-      addServerHeader(
-        HttpRoutes.of[IO] {
-          case GET -> Root / "plaintext" =>
-            Ok("Hello, World!")
+    addServerHeader(
+      HttpRoutes.of[IO] {
+        case GET -> Root / "plaintext" =>
+          Ok("Hello, World!")
+      
+        case GET -> Root / "json" =>
+          Ok(Message("Hello, World!").asJson)
+      
+        case GET -> Root / "db" =>
+          Ok(db.selectRandomWorld.map(_.asJson))
+      
+        case GET -> Root / "queries" :? Queries(numQueries) =>
+          Ok(db.getWorlds(numQueries).map(_.asJson))
+      
+        case GET -> Root / "fortunes" =>
+          Ok(for {
+            oldFortunes <- db.getFortunes
+            newFortunes = getSortedFortunes(oldFortunes)
+          } yield html.index(newFortunes))
         
-          case GET -> Root / "json" =>
-            Ok(Message("Hello, World!").asJson)
-        
-          case GET -> Root / "db" =>
-            Ok(db.selectRandomWorld.map(_.asJson))
-        
-          case GET -> Root / "queries" :? Queries(numQueries) =>
-            Ok(db.getWorlds(numQueries).map(_.asJson))
-        
-          case GET -> Root / "fortunes" =>
-            Ok(for {
-              oldFortunes <- db.getFortunes
-              newFortunes = getSortedFortunes(oldFortunes)
-            } yield html.index(newFortunes))
-          
-          case GET -> Root / "updates" :? Queries(numQueries) =>
-            Ok(for {
-              worlds <- db.getWorlds(numQueries)
-              newWorlds <- db.getNewWorlds(worlds)
-              _ <- db.updateWorlds(newWorlds)
-            } yield newWorlds.asJson)
-        }
-      )
+        case GET -> Root / "updates" :? Queries(numQueries) =>
+          Ok(for {
+            worlds <- db.getWorlds(numQueries)
+            newWorlds <- db.getNewWorlds(worlds)
+            _ <- db.updateWorlds(newWorlds)
+          } yield newWorlds.asJson)
+      }
     )
 
   // Entry point when starting service
