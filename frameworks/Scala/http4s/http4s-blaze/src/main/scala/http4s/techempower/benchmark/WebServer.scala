@@ -64,7 +64,7 @@ object WebServer extends IOApp with Http4sDsl[IO] {
       service.run(req).map(_.putHeaders(server))
     }
 
-  val server = Server(ProductId("http4s", None))
+  val server = Server(ProductId("http4s-blaze", None))
 
   // HTTP service definition
   def service(db: DatabaseService) =

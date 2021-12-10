@@ -1,4 +1,4 @@
-name := "http4s"
+name := "http4s-blaze"
 
 version := "1.0"
 

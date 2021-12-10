@@ -1,11 +1,11 @@
 FROM openjdk:17 AS builder
 WORKDIR /http4s
-COPY http4s-blaze/project project
-COPY http4s-blaze/src src
-COPY http4s-blaze/build.sbt build.sbt
+COPY http4s-ember/project project
+COPY http4s-ember/src src
+COPY http4s-ember/build.sbt build.sbt
 COPY sbt sbt
 RUN ./sbt assembly -batch && \
-    mv target/scala-2.13/http4s-blaze-assembly-1.0.jar . && \
+    mv target/scala-2.13/http4s-ember-assembly-1.0.jar . && \
     rm -Rf target && \
     rm -Rf project/target && \
     rm -Rf ~/.sbt && \
@@ -14,7 +14,7 @@ RUN ./sbt assembly -batch && \
     
 FROM openjdk:17
 WORKDIR /http4s
-COPY --from=builder /http4s/http4s-blaze-assembly-1.0.jar /http4s/http4s-assembly-1.0.jar
+COPY --from=builder /http4s/http4s-ember-assembly-1.0.jar /http4s/http4s-assembly-1.0.jar
 
 EXPOSE 8080
 
