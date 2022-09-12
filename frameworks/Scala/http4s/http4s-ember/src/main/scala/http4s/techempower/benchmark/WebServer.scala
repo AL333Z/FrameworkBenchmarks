@@ -11,9 +11,6 @@ import org.http4s.twirl._
 import org.http4s.ember.server.EmberServerBuilder
 import com.comcast.ip4s._
 import skunk._
-import natchez.jaeger.Jaeger
-import _root_.io.jaegertracing.Configuration.SamplerConfiguration
-import _root_.io.jaegertracing.Configuration.ReporterConfiguration
 import natchez.http4s.NatchezMiddleware
 import cats.effect.kernel._
 import cats._
@@ -22,7 +19,6 @@ import cats.data._
 import fs2.io.net.Network
 import cats.implicits._
 import org.http4s.implicits._
-import natchez.http4s.implicits._
 import natchez._
 import org.http4s.server.middleware.ErrorHandling
 
@@ -110,33 +106,14 @@ object WebServer extends IOApp {
     .map(ErrorHandling.httpRoutes(_))
     .map(NatchezMiddleware.server(_))
 
-
-  def entryPointResource[F[_]: Sync]: Resource[F, EntryPoint[F]] =
-    Jaeger.entryPoint[F](
-      system    = "Http4sExample",
-      uriPrefix = Some(new java.net.URI("http://localhost:16686"))
-    ) { c =>
-      Sync[F].delay {
-        c.withSampler(SamplerConfiguration.fromEnv)
-         .withReporter(ReporterConfiguration.fromEnv)
-         .getTracer
-      }
-    }
-
-  def routes[F[_]: Async: Console: Parallel](dbHost: String, traced: Boolean): Resource[F, HttpRoutes[F]] =
-    if (traced)
-      for {
-        ep <- entryPointResource
-        app <- ep.liftR(routesResource(dbHost))
-      } yield app
-    else {
+  def routes[F[_]: Async: Console: Parallel](dbHost: String): Resource[F, HttpRoutes[F]] = {
       import natchez.Trace.Implicits.noop
       routesResource(dbHost)
     }
 
   def server[F[_]: Async: Console: Parallel](dbHost: Option[String]): Resource[F, ExitCode] =
     for {
-      routes <- routes(dbHost.getOrElse("localhost"), dbHost.isEmpty)
+      routes <- routes(dbHost.getOrElse("localhost"))
       _  <- EmberServerBuilder
               .default[F]
               .withHost(ipv4"0.0.0.0")
